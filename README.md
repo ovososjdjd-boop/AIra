@@ -20,6 +20,7 @@
 - [`experiments/EXP01_REPORT.md`](experiments/EXP01_REPORT.md) — **трилемма локального кредита**: FF-11/FF-12 подтверждены [Э], H-14 ✓ (×16–23), H-18 ✓ (мультигрид, наклон 0,11 vs 2,00).
 - [`experiments/EXP02_REPORT.md`](experiments/EXP02_REPORT.md) — **σ-δ событийное кодирование**: FF-1/FF-3 подтверждены, канал σ-δ даёт ×8–40 бит экономии.
 - [`benchmarks/RIG_REPORT.md`](benchmarks/RIG_REPORT.md) — **M1, стойка**: генеративный корпус, char-токенизатор, GPT-micro бейзлайны (torch CPU), энергопрокси v2; ворота M1 закрыты.
+- [`corpus_external/README.md`](corpus_external/README.md) — реестр внешних корпусов (HF недоступен → ручная загрузка): opus46 (англ. рассуждения, UNVERIFIED), правила добавления и проверки.
 - [`experiments/EXP04_REPORT.md`](experiments/EXP04_REPORT.md) — **мост обучения**: PC против BP на посимвольной LM — ppl +3,5% при равных шагах; найден механизм деградации выравнивания и рецепт для M2.
 - [`experiments/EXP05_REPORT.md`](experiments/EXP05_REPORT.md) — **вспоминание по крючку**: DAM-стор, 12 800 эпизодов безошибочно, ×10³–10⁴ дешевле KV-скана; H-21/H-22 ✓; обход C5.
 - Запуск: `bash scripts/setup_env.sh` (AIRA_NO_TORCH=1 — без torch), затем `.venv/bin/python experiments/exp01_pc_trilemma.py` (и др. по отчётам).
