@@ -6,6 +6,7 @@
 ## Документы
 
 - [`research/PROTO_ROADMAP.md`](research/PROTO_ROADMAP.md) — **дорожная карта к прототипу AIra-1**: целевая спецификация (уровень GPT-2 на нашем субстрате ×10 энергоэкономия), фазы M1–M6 с воротами и смерть-критериями, риски.
+- [`research/AUDIT_2026-08-05.md`](research/AUDIT_2026-08-05.md) — честный самоаудит: веса достигнутого, реальные проблемы (прокси≠ватты, обучение C6, синтетика, железо).
 - [`research/BRAIN_CUES.md`](research/BRAIN_CUES.md) — речь (два потока), синестезия (дешёвое скрещивание кодов), вспоминание по крючку (паттерн-достройка): факты → перевод на субстрат → план решения C5 (EXP-05, H-21/H-22).
 - [`research/ROADMAP.md`](research/ROADMAP.md) — тематическая программа (T0–T14, P0–P7), принципы и метрики.
 - [`research/LITERATURE.md`](research/LITERATURE.md) — глубокая аннотированная библиография по всем темам.
@@ -19,6 +20,7 @@
 - [`experiments/EXP01_REPORT.md`](experiments/EXP01_REPORT.md) — **трилемма локального кредита**: FF-11/FF-12 подтверждены [Э], H-14 ✓ (×16–23), H-18 ✓ (мультигрид, наклон 0,11 vs 2,00).
 - [`experiments/EXP02_REPORT.md`](experiments/EXP02_REPORT.md) — **σ-δ событийное кодирование**: FF-1/FF-3 подтверждены, канал σ-δ даёт ×8–40 бит экономии.
 - [`benchmarks/RIG_REPORT.md`](benchmarks/RIG_REPORT.md) — **M1, стойка**: генеративный корпус, char-токенизатор, GPT-micro бейзлайны (torch CPU), энергопрокси v2; ворота M1 закрыты.
+- [`experiments/EXP04_REPORT.md`](experiments/EXP04_REPORT.md) — **мост обучения**: PC против BP на посимвольной LM — ppl +3,5% при равных шагах; найден механизм деградации выравнивания и рецепт для M2.
 - [`experiments/EXP05_REPORT.md`](experiments/EXP05_REPORT.md) — **вспоминание по крючку**: DAM-стор, 12 800 эпизодов безошибочно, ×10³–10⁴ дешевле KV-скана; H-21/H-22 ✓; обход C5.
 - Запуск: `bash scripts/setup_env.sh` (AIRA_NO_TORCH=1 — без torch), затем `.venv/bin/python experiments/exp01_pc_trilemma.py` (и др. по отчётам).
 
