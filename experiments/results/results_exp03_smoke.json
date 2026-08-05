@@ -1,0 +1,42 @@
+{
+  "run": {
+    "rig": "sandbox-cpu-2core",
+    "tag": "smoke",
+    "kind": "gpt-lite-char (dense bp)",
+    "cfg": {
+      "vocab": 64,
+      "dim": 96,
+      "layers": 3,
+      "heads": 4,
+      "ctx": 96,
+      "batch": 32,
+      "steps": 10,
+      "lr": 0.003,
+      "seed": 42
+    },
+    "params": 348480,
+    "tokens_seen": 30720,
+    "val_ppl_final": 40.839,
+    "energy_pj_per_token_train": 3685030.9,
+    "energy_j_total_train": 0.1132,
+    "wall_s": 1.0,
+    "tok_per_s": 31995.1,
+    "ts": "2026-08-05T17:01:49"
+  },
+  "history": [
+    {
+      "step": 5,
+      "train_loss": 3.9406,
+      "val_ppl": 48.558,
+      "wall_s": 0.5,
+      "tok_per_s": 30742.1
+    },
+    {
+      "step": 10,
+      "train_loss": 3.7338,
+      "val_ppl": 40.839,
+      "wall_s": 1.0,
+      "tok_per_s": 31996.4
+    }
+  ]
+}

@@ -213,6 +213,19 @@
 
 ---
 
+## S. Воспитание: RLHF / конституции / самокоррекция (узел M7, ALIGNMENT.md)
+
+- **Christiano et al., “Deep RL from Human Preferences”, 2017** — [arxiv.org/abs/1706.03741](https://arxiv.org/abs/1706.03741) — первопринцип: награда из парных людских предпочтений.
+- **Ouyang et al., “Training language models to follow instructions with human feedback” (InstructGPT), 2022** — [arxiv.org/abs/2203.02155](https://arxiv.org/abs/2203.02155) — 3 стадии SFT→RM→PPO; KL-штраф к опорной политике <<≈ наш каскад-гомеостаз>>.
+- **Bai et al., “Constitutional AI: Harmlessness from AI Feedback”, Anthropic 2022** — [arxiv.org/abs/2212.08073](https://arxiv.org/abs/2212.08073) — critique→revision (SL-CAI) + ИИ-судья по конституции (RLAIF); конспект-анализ 2026: «конституция как сжатие интерфейса управления» [vanleke.com](https://vanleke.com/blog/2026-06-25-why-constitutional-ai-can-replace-many-harmlessness-labels.html).
+- **Rafailov et al., “Direct Preference Optimization” (DPO), 2023** — [arxiv.org/abs/2305.18290](https://arxiv.org/abs/2305.18290) — лёгкий бейзлайн для ворот M7.
+- **Shinn et al., “Reflexion”, 2023** — [arxiv.org/abs/2303.11366](https://arxiv.org/abs/2303.11366) — вербальный RL: фидбек как текст в памяти эпизода <<наш сон-реплей (H-20)>>.
+- **Madaan et al., “Self-Refine”, 2023** — [arxiv.org/abs/2303.17651](https://arxiv.org/abs/2303.17651) — критика-ревизия одной моделью; сравнить с producer–critic.
+- **Huang et al., “Large Language Models Cannot Self-Correct Reasoning Yet”, ICLR 2024** — [openreview.net/pdf?id=IkmD3fKBPQ](https://openreview.net/pdf?id=IkmD3fKBPQ) — предостережение: без внешнего фидбека самокоррекция вредит → держать внешнего критика и делиберацию-гейт.
+- **Kumar et al., “SCoRe: Training self-correction via RL”, DeepMind 2024** — [arxiv.org/abs/2409.12917](https://arxiv.org/abs/2409.12917) — RL на самопорождённых исправлениях.
+- **Dhor et al., “Reflexion: LMs that Think Twice” с UTD, 2025** — [openreview.net/forum?id=FDG2G7JDWO](https://openreview.net/forum?id=FDG2G7JDWO) — делиберация по триггеру неуверенности <<наше H-04 дословно>>.
+- **Eldan & Li, “TinyStories”, 2023** — [arxiv.org/abs/2305.07759](https://arxiv.org/abs/2305.07759); датасет [huggingface.co/datasets/roneneldan/TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories) — эталон малого языкового бенча (для M1/M3; в нашей среде HF не виден — генеративный заменитель в `src/aira/corpus.py`).
+
 ## Мандатный reading-order (ядро, 15 работ + 3 из цикла 2)
 
 0. (цикл 2) Bastos+ 2020 (зонный протокол); van den Heuvel–Sporns 2012 (скелет); Millidge+ 2022 (PC≈BP точно).

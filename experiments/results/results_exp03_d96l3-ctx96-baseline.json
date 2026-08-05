@@ -1,0 +1,70 @@
+{
+  "run": {
+    "rig": "sandbox-cpu-2core",
+    "tag": "d96l3-ctx96-baseline",
+    "kind": "gpt-lite-char (dense bp)",
+    "cfg": {
+      "vocab": 64,
+      "dim": 96,
+      "layers": 3,
+      "heads": 4,
+      "ctx": 96,
+      "batch": 32,
+      "steps": 1500,
+      "lr": 0.003,
+      "seed": 42
+    },
+    "params": 348480,
+    "tokens_seen": 4608000,
+    "val_ppl_final": 1.117,
+    "energy_pj_per_token_train": 3685030.9,
+    "energy_j_total_train": 16.9806,
+    "wall_s": 125.8,
+    "tok_per_s": 36629.3,
+    "ts": "2026-08-05T17:04:17"
+  },
+  "history": [
+    {
+      "step": 250,
+      "train_loss": 0.2897,
+      "val_ppl": 1.256,
+      "wall_s": 20.9,
+      "tok_per_s": 36665.8
+    },
+    {
+      "step": 500,
+      "train_loss": 0.178,
+      "val_ppl": 1.159,
+      "wall_s": 42.5,
+      "tok_per_s": 36143.0
+    },
+    {
+      "step": 750,
+      "train_loss": 0.1308,
+      "val_ppl": 1.14,
+      "wall_s": 62.5,
+      "tok_per_s": 36892.0
+    },
+    {
+      "step": 1000,
+      "train_loss": 0.1377,
+      "val_ppl": 1.127,
+      "wall_s": 84.3,
+      "tok_per_s": 36445.8
+    },
+    {
+      "step": 1250,
+      "train_loss": 0.1112,
+      "val_ppl": 1.12,
+      "wall_s": 105.2,
+      "tok_per_s": 36511.8
+    },
+    {
+      "step": 1500,
+      "train_loss": 0.1185,
+      "val_ppl": 1.117,
+      "wall_s": 125.8,
+      "tok_per_s": 36629.3
+    }
+  ]
+}
