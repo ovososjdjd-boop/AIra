@@ -1,0 +1,70 @@
+{
+  "run": {
+    "rig": "sandbox-cpu-2core",
+    "tag": "d64l2-ctx64-small",
+    "kind": "gpt-lite-char (dense bp)",
+    "cfg": {
+      "vocab": 64,
+      "dim": 64,
+      "layers": 2,
+      "heads": 4,
+      "ctx": 64,
+      "batch": 32,
+      "steps": 1500,
+      "lr": 0.003,
+      "seed": 42
+    },
+    "params": 107136,
+    "tokens_seen": 3072000,
+    "val_ppl_final": 1.14,
+    "energy_pj_per_token_train": 1135220.6,
+    "energy_j_total_train": 3.4874,
+    "wall_s": 41.4,
+    "tok_per_s": 74231.7,
+    "ts": "2026-08-05T17:05:01"
+  },
+  "history": [
+    {
+      "step": 250,
+      "train_loss": 0.5477,
+      "val_ppl": 1.553,
+      "wall_s": 7.4,
+      "tok_per_s": 69495.6
+    },
+    {
+      "step": 500,
+      "train_loss": 0.2358,
+      "val_ppl": 1.21,
+      "wall_s": 13.9,
+      "tok_per_s": 73433.6
+    },
+    {
+      "step": 750,
+      "train_loss": 0.1626,
+      "val_ppl": 1.173,
+      "wall_s": 21.4,
+      "tok_per_s": 71939.1
+    },
+    {
+      "step": 1000,
+      "train_loss": 0.1684,
+      "val_ppl": 1.155,
+      "wall_s": 28.1,
+      "tok_per_s": 72833.8
+    },
+    {
+      "step": 1250,
+      "train_loss": 0.1377,
+      "val_ppl": 1.146,
+      "wall_s": 34.7,
+      "tok_per_s": 73842.5
+    },
+    {
+      "step": 1500,
+      "train_loss": 0.1517,
+      "val_ppl": 1.14,
+      "wall_s": 41.4,
+      "tok_per_s": 74231.7
+    }
+  ]
+}
