@@ -158,6 +158,7 @@ class CharMLP:
     def pc_relax(self, idx: np.ndarray, y: np.ndarray, beta: float = 0.1,
                  T: int = 32, alpha: float = 0.3, method: str = "euler",
                  eps: float = 0.0, freeze: float = 0.0, freeze_q: float = 0.0,
+                 aa: int = 0,
                  bus12: BusSigmaDelta | None = None,
                  bus21: BusSigmaDelta | None = None) -> dict:
         """Релаксация (s1,s2) к min E по состояниям; веса заморожены.
@@ -173,6 +174,11 @@ class CharMLP:
         квантиль распределения |pg| текущей итерации (EXP-10: абсолютный порог
         не переносится по размерам зоны; квантиль нормирован по построению),
         freeze_q=0.7 ⇔ спят 70% координат данного слоя.
+
+        aa>0 (только method="bb") — ускорение Андерсона глубины aa (M2.1, EXP-12):
+        по последним aa принятым шагам строится экстраполяция, минимизирующая
+        норму невязки на истории; кандидат принимается сторожем энергии —
+        иначе продолжается обычный BB-шаг. Рекомендуемая глубина 2–4.
         """
         B = len(idx)
         y_oh = np.zeros((B, self.vocab), np.float32)
@@ -194,6 +200,9 @@ class CharMLP:
         act1 = np.ones(s1.shape, bool)                       # событийные маски
         act2 = np.ones(s2.shape, bool)
         work, work_full = 0, 0
+        S_h: list[np.ndarray] = []                            # история Андерсона
+        D_h: list[np.ndarray] = []
+        aa_hits = 0
         for t in range(T):
             f1 = np.tanh(x @ self.W1.T + self.b1)
             f1p = 1 - f1**2
@@ -229,13 +238,54 @@ class CharMLP:
                         damp *= 0.5                          # — откат и затухание
                         s1, s2 = s1p, s2p
                         resid = prev_resid
+                        S_h.clear(); D_h.clear()             # история мешается — сброс
                     else:
                         damp = np.minimum(damp * 1.15, 1.0)
                         E_prev = E_here
                         s1p, s2p = s1.copy(), s2.copy()
                         g1p, g2p = pg1, pg2
+                        pre1 = s1.ravel().copy(); pre2 = s2.ravel().copy()
                         s1[act1] -= damp[0] * bb[0] * pg1[act1]
                         s2[act2] -= damp[1] * bb[1] * pg2[act2]
+                        if aa:
+                            S_h.append(np.concatenate([pre1, pre2]))
+                            D_h.append(np.concatenate(
+                                [s1.ravel() - pre1, s2.ravel() - pre2]))
+                            if len(S_h) > aa:
+                                S_h.pop(0); D_h.pop(0)
+                            if len(D_h) >= aa:               # кандидат Андерсона
+                                Dh = np.stack(D_h).astype(np.float64)
+                                G = Dh @ Dh.T
+                                m_ = len(D_h)
+                                A = np.zeros((m_ + 1, m_ + 1))
+                                A[:m_, :m_] = G + np.eye(m_) * \
+                                    (np.trace(G) / m_ + 1e-30) * 1e-8
+                                A[:m_, m_] = 1.0; A[m_, :m_] = 1.0
+                                rhs = np.zeros(m_ + 1); rhs[m_] = 1.0
+                                try:
+                                    sol = np.linalg.solve(A, rhs)
+                                    alf = sol[:m_]
+                                except np.linalg.LinAlgError:
+                                    alf = None
+                                if alf is not None and \
+                                        float(np.abs(alf).max()) < 60.0:
+                                    Sh = np.stack(S_h).astype(np.float64)
+                                    S_c = alf @ (Sh + Dh)
+                                    c1 = S_c[: s1.size].reshape(s1.shape) \
+                                        .astype(np.float32)
+                                    c2 = S_c[s1.size:].reshape(s2.shape) \
+                                        .astype(np.float32)
+                                    t1 = s1.copy(); t1[act1] = c1[act1]
+                                    t2 = s2.copy(); t2[act2] = c2[act2]
+                                    E_c = self._state_energy(x, t1, s1_sent,
+                                                             t2, y_oh, beta)
+                                    if E_c <= E_prev * (1 + 1e-4):
+                                        s1[...] = t1; s2[...] = t2
+                                        E_prev = E_c
+                                        s1p, s2p = s1.copy(), s2.copy()
+                                        g1p, g2p = pg1, pg2
+                                        S_h.clear(); D_h.clear()
+                                        aa_hits += 1
             elif method == "jacobi":
                 s1[act1] -= alpha * g1[act1] / d1[act1]
                 s2[act2] -= alpha * g2[act2] / d2[act2]
@@ -265,7 +315,7 @@ class CharMLP:
             prev_resid = resid
         return {"x": x, "s1": s1, "s2": s2, "y_oh": y_oh, "s1_bus": b12.level,
                 "T_used": t_used, "resid": resid, "quiet_frac": quiet,
-                "bus_events": events, "stop": stop,
+                "bus_events": events, "stop": stop, "aa_hits": aa_hits,
                 "work_frac": (work / work_full) if work_full else 1.0,
                 "T_coord_mean": (t_used * work / work_full) if work_full else float(t_used)}
 
