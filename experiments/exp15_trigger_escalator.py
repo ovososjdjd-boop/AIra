@@ -137,14 +137,14 @@ def stage_shelf(train_ids: np.ndarray, valid_ids: np.ndarray) -> dict:
 
 
 def stage_hybrid(train_ids: np.ndarray, valid_ids: np.ndarray,
-                 reuse: bool = False) -> dict:
+                 reuse: bool = False, tag: str = "") -> dict:
     """Эскалатор L0→L1: обученная зона-96 (PC v3.2) на остатке после триггера."""
     from aira.zone import CharMLP, AdamW, BusSigmaDelta
     from exp12_precond_aa import LR_MAP, batch
 
     # --- L1: зона-96, готовая спецификация v3.2 (как lr_96_step03 из EXP-13)
     CTX, D_EMB, B, STEPS = 32, 32, 128, 2400
-    wfp = RESULTS / "ckpt_e15_l1_96.npz"
+    wfp = RESULTS / f"ckpt_e15_l1_96{tag}.npz"
     model = CharMLP(vocab=V, ctx=CTX, d_emb=D_EMB, d_hid=96, seed=42)
     if wfp.exists() and reuse:
         model.load_arrays({k: v for k, v in np.load(wfp).items()})
@@ -239,7 +239,7 @@ def main() -> None:
         out["shelf" + args.tag] = stage_shelf(train_ids, valid_ids)
     if args.stage in ("hybrid", "all"):
         out["hybrid" + args.tag] = stage_hybrid(train_ids, valid_ids,
-                                                reuse=bool(args.reuse))
+                                                reuse=bool(args.reuse), tag=args.tag)
     fp = RESULTS / "results_exp15.json"
     if fp.exists():
         prev = json.loads(fp.read_text(encoding="utf-8"))
