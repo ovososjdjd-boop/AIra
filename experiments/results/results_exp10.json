@@ -1,0 +1,609 @@
+{
+ "config": {
+  "ctx": 32,
+  "d_emb": 32,
+  "B": 128,
+  "steps": 800,
+  "sizes": [
+   96,
+   256,
+   512
+  ]
+ },
+ "ladder": {
+  "96": {
+   "bp": {
+    "params": 115968,
+    "d_hid": 96,
+    "kind": "bp",
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.5512
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2209
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1622
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1288
+     }
+    ],
+    "T_mean": null,
+    "work_frac": null,
+    "compress": null,
+    "wall_s": 3.4,
+    "val_ppl_full": 1.1416
+   },
+   "pc": {
+    "params": 115968,
+    "d_hid": 96,
+    "kind": "pc",
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.4921
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2611
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1952
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1632
+     }
+    ],
+    "T_mean": 32.0,
+    "work_frac": 0.212,
+    "compress": 18.51,
+    "wall_s": 47.1,
+    "val_ppl_full": 1.2029,
+    "gap_vs_bp": 0.0537
+   }
+  },
+  "256": {
+   "bp": {
+    "params": 346688,
+    "d_hid": 256,
+    "kind": "bp",
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.4723
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2292
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1651
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1439
+     }
+    ],
+    "T_mean": null,
+    "work_frac": null,
+    "compress": null,
+    "wall_s": 6.2,
+    "val_ppl_full": 1.1519
+   },
+   "pc": {
+    "params": 346688,
+    "d_hid": 256,
+    "kind": "pc",
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.4504
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.261
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.2409
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.2232
+     }
+    ],
+    "T_mean": 32.0,
+    "work_frac": 0.284,
+    "compress": 20.11,
+    "wall_s": 117.5,
+    "val_ppl_full": 1.2448,
+    "gap_vs_bp": 0.0806
+   }
+  },
+  "512": {
+   "bp": {
+    "params": 822336,
+    "d_hid": 512,
+    "kind": "bp",
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.5537
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2541
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.2082
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1846
+     }
+    ],
+    "T_mean": null,
+    "work_frac": null,
+    "compress": null,
+    "wall_s": 13.4,
+    "val_ppl_full": 1.1793
+   },
+   "pc": {
+    "params": 822336,
+    "d_hid": 512,
+    "kind": "pc",
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.5174
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.5933
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.453
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.3606
+     }
+    ],
+    "T_mean": 32.0,
+    "work_frac": 0.457,
+    "compress": 15.3,
+    "wall_s": 244.2,
+    "val_ppl_full": 1.3765,
+    "gap_vs_bp": 0.1672
+   }
+  }
+ },
+ "gap_pp_slope": 0.1135,
+ "verdict": "✗ зазор растёт — к C6-якорям",
+ "config_b": {
+  "ctx": 32,
+  "d_emb": 32,
+  "B": 128,
+  "steps": 1200,
+  "sizes": [
+   96,
+   256,
+   512
+  ]
+ },
+ "ladder_b": {
+  "96": {
+   "bp": {
+    "params": 115968,
+    "d_hid": 96,
+    "kind": "bp",
+    "lr": 0.003,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.5512
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2209
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1622
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1288
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.1323
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.1236
+     }
+    ],
+    "T_mean": null,
+    "work_frac": null,
+    "compress": null,
+    "wall_s": 5.2,
+    "val_ppl_full": 1.1166
+   },
+   "pc": {
+    "params": 115968,
+    "d_hid": 96,
+    "kind": "pc",
+    "lr": 0.003,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.4921
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2611
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1952
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1632
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.2633
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.234
+     }
+    ],
+    "T_mean": 32.0,
+    "work_frac": 0.178,
+    "compress": 21.05,
+    "wall_s": 68.9,
+    "val_ppl_full": 1.2141,
+    "gap_vs_bp": 0.0873
+   }
+  },
+  "256": {
+   "bp": {
+    "params": 346688,
+    "d_hid": 256,
+    "kind": "bp",
+    "lr": 0.0021,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.4904
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2351
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1589
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1368
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.1527
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.1328
+     }
+    ],
+    "T_mean": null,
+    "work_frac": null,
+    "compress": null,
+    "wall_s": 9.7,
+    "val_ppl_full": 1.1314
+   },
+   "pc": {
+    "params": 346688,
+    "d_hid": 256,
+    "kind": "pc",
+    "lr": 0.0021,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.4979
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2716
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.2011
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1829
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.2676
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.1963
+     }
+    ],
+    "T_mean": 32.0,
+    "work_frac": 0.237,
+    "compress": 23.15,
+    "wall_s": 169.3,
+    "val_ppl_full": 1.2011,
+    "gap_vs_bp": 0.0616
+   }
+  },
+  "512": {
+   "bp": {
+    "params": 822336,
+    "d_hid": 512,
+    "kind": "bp",
+    "lr": 0.0013,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.5174
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2504
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1881
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1539
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.1717
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.1445
+     }
+    ],
+    "T_mean": null,
+    "work_frac": null,
+    "compress": null,
+    "wall_s": 19.6,
+    "val_ppl_full": 1.1437
+   },
+   "pc": {
+    "params": 822336,
+    "d_hid": 512,
+    "kind": "pc",
+    "lr": 0.0013,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.6807
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.5279
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.4337
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.4121
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.5204
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.4131
+     }
+    ],
+    "T_mean": 32.0,
+    "work_frac": 0.403,
+    "compress": 17.93,
+    "wall_s": 357.9,
+    "val_ppl_full": 1.3771,
+    "gap_vs_bp": 0.2041
+   }
+  }
+ },
+ "gap_pp_slope_b": 0.1168,
+ "verdict_b": "✗ зазор растёт — к C6-якорям",
+ "config_c": {
+  "ctx": 32,
+  "d_emb": 32,
+  "B": 128,
+  "steps": 1200,
+  "sizes": [
+   96,
+   512
+  ],
+  "beta_anneal": true
+ },
+ "ladder_c": {
+  "96": {
+   "bp": {
+    "params": 115968,
+    "d_hid": 96,
+    "kind": "bp",
+    "lr": 0.003,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.5512
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2209
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1622
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1288
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.1323
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.1236
+     }
+    ],
+    "T_mean": null,
+    "work_frac": null,
+    "compress": null,
+    "wall_s": 5.5,
+    "val_ppl_full": 1.1166
+   },
+   "pc": {
+    "params": 115968,
+    "d_hid": 96,
+    "kind": "pc",
+    "lr": 0.003,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.4868
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2481
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1931
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1846
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.2262
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.1764
+     }
+    ],
+    "T_mean": 32.0,
+    "work_frac": 0.178,
+    "compress": 22.16,
+    "wall_s": 73.5,
+    "val_ppl_full": 1.1731,
+    "gap_vs_bp": 0.0506
+   }
+  },
+  "512": {
+   "bp": {
+    "params": 822336,
+    "d_hid": 512,
+    "kind": "bp",
+    "lr": 0.0013,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.5174
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.2504
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.1881
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.1539
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.1717
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.1445
+     }
+    ],
+    "T_mean": null,
+    "work_frac": null,
+    "compress": null,
+    "wall_s": 20.8,
+    "val_ppl_full": 1.1437
+   },
+   "pc": {
+    "params": 822336,
+    "d_hid": 512,
+    "kind": "pc",
+    "lr": 0.0013,
+    "curve": [
+     {
+      "step": 200,
+      "val_ppl": 1.6454
+     },
+     {
+      "step": 400,
+      "val_ppl": 1.5205
+     },
+     {
+      "step": 600,
+      "val_ppl": 1.4503
+     },
+     {
+      "step": 800,
+      "val_ppl": 1.4562
+     },
+     {
+      "step": 1000,
+      "val_ppl": 1.3646
+     },
+     {
+      "step": 1200,
+      "val_ppl": 1.2948
+     }
+    ],
+    "T_mean": 32.0,
+    "work_frac": 0.42,
+    "compress": 21.96,
+    "wall_s": 387.2,
+    "val_ppl_full": 1.3048,
+    "gap_vs_bp": 0.1409
+   }
+  }
+ },
+ "gap_pp_slope_c": 0.0903,
+ "verdict_c": "✗ зазор растёт — к C6-якорям"
+}
