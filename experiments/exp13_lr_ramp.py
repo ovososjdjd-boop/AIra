@@ -102,7 +102,10 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
     for step in range(start + 1, steps + 1):
         x, y = batch(train_ids, rng)
         beta = max(0.1, beta0 + (0.1 - beta0) * (step / steps))
-        T_eff = int(round(32 + (64 - 32) * (1.0 - beta) / (1.0 - 0.1)))
+        # K1-связка T(β) нормируется от ТЕКУЩЕГО стартового β0 (EXP-14: вторая декада
+        # вскрыла рассогласование — нормировка от 1.0 при β0<1 стартует сразу глубоко
+        # при сильном β → разнос 300→600). Глубоко только при СЛАБОМ β.
+        T_eff = int(round(32 + (64 - 32) * (beta0 - beta) / max(beta0 - 0.1, 1e-9)))
         g, st = model.pc_grads(x, y, beta=beta, method="bb", alpha=1.0, T=T_eff,
                                freeze=3e-3, eps=1e-2, bus12=bus12, bus21=bus21)
         T_acc += st["T_used"]; W_acc += st["work_frac"]

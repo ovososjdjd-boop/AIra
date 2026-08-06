@@ -136,28 +136,36 @@ def stage_shelf(train_ids: np.ndarray, valid_ids: np.ndarray) -> dict:
     return out
 
 
-def stage_hybrid(train_ids: np.ndarray, valid_ids: np.ndarray) -> dict:
+def stage_hybrid(train_ids: np.ndarray, valid_ids: np.ndarray,
+                 reuse: bool = False) -> dict:
     """Эскалатор L0→L1: обученная зона-96 (PC v3.2) на остатке после триггера."""
     from aira.zone import CharMLP, AdamW, BusSigmaDelta
     from exp12_precond_aa import LR_MAP, batch
 
     # --- L1: зона-96, готовая спецификация v3.2 (как lr_96_step03 из EXP-13)
     CTX, D_EMB, B, STEPS = 32, 32, 128, 2400
+    wfp = RESULTS / "ckpt_e15_l1_96.npz"
     model = CharMLP(vocab=V, ctx=CTX, d_emb=D_EMB, d_hid=96, seed=42)
-    opt = AdamW(model.arrays(), lr=LR_MAP[96])
-    rng = np.random.default_rng(123)
-    bus12, bus21 = BusSigmaDelta((B, 96), 0.05), BusSigmaDelta((B, 96), 0.05)
-    t0 = time.perf_counter()
-    for step in range(1, STEPS + 1):
-        x, y = batch(train_ids, rng)
-        beta = max(0.1, 1.0 + (0.1 - 1.0) * (step / STEPS))
-        T_eff = int(round(32 + (64 - 32) * (1.0 - beta) / (1.0 - 0.1)))
-        g, _ = model.pc_grads(x, y, beta=beta, method="bb", alpha=1.0, T=T_eff,
-                              freeze=3e-3, eps=1e-2, bus12=bus12, bus21=bus21)
-        opt.lr = LR_MAP[96] * (0.3 if step > 1600 else 1.0)
-        opt.step(g)
-        if step % 600 == 0:
-            print(f"   L1 зона-96 шаг {step} ({time.perf_counter() - t0:.0f} с)", flush=True)
+    if wfp.exists() and reuse:
+        model.load_arrays({k: v for k, v in np.load(wfp).items()})
+        print(f"   L1 зона-96: веса из {wfp.name} (переобучение пропущено)", flush=True)
+    else:
+        opt = AdamW(model.arrays(), lr=LR_MAP[96])
+        rng = np.random.default_rng(123)
+        bus12, bus21 = BusSigmaDelta((B, 96), 0.05), BusSigmaDelta((B, 96), 0.05)
+        t0 = time.perf_counter()
+        for step in range(1, STEPS + 1):
+            x, y = batch(train_ids, rng)
+            beta = max(0.1, 1.0 + (0.1 - 1.0) * (step / STEPS))
+            T_eff = int(round(32 + (64 - 32) * (1.0 - beta) / (1.0 - 0.1)))
+            g, _ = model.pc_grads(x, y, beta=beta, method="bb", alpha=1.0, T=T_eff,
+                                  freeze=3e-3, eps=1e-2, bus12=bus12, bus21=bus21)
+            opt.lr = LR_MAP[96] * (0.3 if step > 1600 else 1.0)
+            opt.step(g)
+            if step % 600 == 0:
+                print(f"   L1 зона-96 шаг {step} ({time.perf_counter() - t0:.0f} с)", flush=True)
+        np.savez(wfp, **model.arrays())
+        print(f"   L1 веса сохранены -> {wfp.name}", flush=True)
 
     # --- потоковый скоринг valid: L0 и L1 на каждой позиции
     sh = TriggerShelf()
@@ -166,6 +174,9 @@ def stage_hybrid(train_ids: np.ndarray, valid_ids: np.ndarray) -> dict:
     t1 = time.perf_counter()
     rows = []          # (q=(sym, conf, total)|None, l1_ce, y)
     for key, y, i in keys_stream(valid_ids):
+        if i < CTX:
+            sh.update(key, y)
+            continue          # начало потока: окно ctx ещё не полное
         x = valid_ids[i - CTX:i]
         logits, _ = model.forward(x[None, :])
         p = np.exp(logits - logits.max(1, keepdims=True))
@@ -214,15 +225,21 @@ def stage_hybrid(train_ids: np.ndarray, valid_ids: np.ndarray) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", default="all", choices=["shelf", "hybrid", "all"])
+    ap.add_argument("--train", default="data/corpus_train.txt",
+                    help="путь к train-корпусу (живой текст: корпус M1 шаблонный!)")
+    ap.add_argument("--valid", default="data/corpus_valid.txt")
+    ap.add_argument("--tag", default="")
+    ap.add_argument("--reuse", type=int, default=0, help="использовать сохранённую зону-96")
     args = ap.parse_args()
     tok = CharTokenizer.load(ROOT / "data" / "tokenizer_char.json")
-    train_ids = load_ids(ROOT / "data" / "corpus_train.txt", tok)
-    valid_ids = load_ids(ROOT / "data" / "corpus_valid.txt", tok)
+    train_ids = load_ids(ROOT / args.train, tok)
+    valid_ids = load_ids(ROOT / args.valid, tok)
     out: dict = {}
     if args.stage in ("shelf", "all"):
-        out["shelf"] = stage_shelf(train_ids, valid_ids)
+        out["shelf" + args.tag] = stage_shelf(train_ids, valid_ids)
     if args.stage in ("hybrid", "all"):
-        out["hybrid"] = stage_hybrid(train_ids, valid_ids)
+        out["hybrid" + args.tag] = stage_hybrid(train_ids, valid_ids,
+                                                reuse=bool(args.reuse))
     fp = RESULTS / "results_exp15.json"
     if fp.exists():
         prev = json.loads(fp.read_text(encoding="utf-8"))
