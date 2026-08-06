@@ -74,7 +74,7 @@ def save_json(key: str, rec: dict) -> None:
 
 def run(d_hid: int, sched: str, train_ids: np.ndarray,
         valid_ids: np.ndarray, steps: int = STEPS, lr0: float = 0.0,
-        at: int = 0, resume: bool = False, tag: str = "") -> dict:
+        at: int = 0, resume: bool = False, tag: str = "", beta0: float = 1.0) -> dict:
     lr0 = lr0 or LR_MAP[d_hid]
     at = at or int(steps * 2 / 3)
     tag = tag or f"{d_hid}_{sched}_{steps}"
@@ -83,7 +83,8 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
     rng = np.random.default_rng(123)
     bus12 = BusSigmaDelta((B, d_hid), 0.05)
     bus21 = BusSigmaDelta((B, d_hid), 0.05)
-    log = {"d_hid": d_hid, "sched": sched, "curve": [], "lr0": lr0, "at": at}
+    log = {"d_hid": d_hid, "sched": sched, "curve": [], "lr0": lr0, "at": at,
+           "beta0": beta0}
     start, T_acc, W_acc = 0, 0.0, 0.0
     ckpt = RESULTS / f"ckpt_{tag}.npz"
     if resume and ckpt.exists():  # возобновление после стирания среды
@@ -100,7 +101,7 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
     t0 = time.perf_counter()
     for step in range(start + 1, steps + 1):
         x, y = batch(train_ids, rng)
-        beta = max(0.1, 1.0 + (0.1 - 1.0) * (step / steps))
+        beta = max(0.1, beta0 + (0.1 - beta0) * (step / steps))
         T_eff = int(round(32 + (64 - 32) * (1.0 - beta) / (1.0 - 0.1)))
         g, st = model.pc_grads(x, y, beta=beta, method="bb", alpha=1.0, T=T_eff,
                                freeze=3e-3, eps=1e-2, bus12=bus12, bus21=bus21)
@@ -145,6 +146,7 @@ def main() -> None:
     ap.add_argument("--steps", type=int, default=STEPS)
     ap.add_argument("--lr", type=float, default=0.0)
     ap.add_argument("--at", type=int, default=0, help="начало рампы (по умолч. 2/3 дистанции, K2)")
+    ap.add_argument("--beta0", type=float, default=1.0, help="стартовый β (диагностика β-шока на новых декадах)")
     ap.add_argument("--resume", type=int, default=0, help="продолжить с чекпоинта ckpt_<tag>.npz")
     ap.add_argument("--tag", default="")
     args = ap.parse_args()
@@ -157,9 +159,10 @@ def main() -> None:
         if args.lr:
             ctag += f"_lr{args.lr:g}"
         r = run(args.size, sched, train_ids, valid_ids, args.steps, lr0=args.lr,
-                at=args.at, resume=bool(args.resume), tag=ctag)
+                at=args.at, resume=bool(args.resume), tag=ctag, beta0=args.beta0)
+        gap_s = f"{r['gap_vs_bp']:+.2%}" if r["gap_vs_bp"] is not None else "—"
         print(f"   [{ctag}] ppl {r['val_ppl_full']:.4f} "
-              f"зазор {r['gap_vs_bp']:+.2%} (bp {r['bp_ref']}) мин {r['curve_min']:.4f} "
+              f"зазор {gap_s} (bp {r['bp_ref']}) мин {r['curve_min']:.4f} "
               f"дрейф {r['tail_drift']:+.2%} работа {r['work_frac']} "
               f"({r['wall_s']} с)", flush=True)
         save_json(f"lr_{ctag}", r)
