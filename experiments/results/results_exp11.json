@@ -1,0 +1,295 @@
+{
+ "s0_depth": {
+  "T": [
+   [
+    8,
+    {
+     "cos": 0.5322,
+     "minl": 0.4273,
+     "resid": 0.75096
+    }
+   ],
+   [
+    16,
+    {
+     "cos": 0.3494,
+     "minl": 0.9107,
+     "resid": 0.76711
+    }
+   ],
+   [
+    32,
+    {
+     "cos": 0.4902,
+     "minl": 0.8911,
+     "resid": 0.52568
+    }
+   ],
+   [
+    64,
+    {
+     "cos": 0.6527,
+     "minl": 0.8146,
+     "resid": 0.37003
+    }
+   ],
+   [
+    96,
+    {
+     "cos": 0.7736,
+     "minl": 0.8386,
+     "resid": 0.13258
+    }
+   ]
+  ]
+ },
+ "s1_sleep": {
+  "abs3e-3": {
+   "cos": 0.4235,
+   "work": 0.123
+  },
+  "q0.5": {
+   "cos": 0.4141,
+   "work": 0.508
+  },
+  "q0.7": {
+   "cos": 0.3615,
+   "work": 0.311
+  },
+  "q0.8": {
+   "cos": 0.3848,
+   "work": 0.213
+  }
+ },
+ "s2_v3": {
+  "spec": {
+   "T": 64,
+   "beta_end": 0.03,
+   "freeze": {
+    "freeze": 0.003
+   }
+  },
+  "bp_ref": {
+   "96": 1.1166,
+   "512": 1.1437
+  },
+  "96": {
+   "d_hid": 96,
+   "curve": [
+    {
+     "step": 300,
+     "val_ppl": 1.361
+    },
+    {
+     "step": 600,
+     "val_ppl": 1.185
+    },
+    {
+     "step": 900,
+     "val_ppl": 1.1844
+    },
+    {
+     "step": 1200,
+     "val_ppl": 1.1817
+    }
+   ],
+   "wall_s": 145.2,
+   "val_ppl_full": 1.184,
+   "T_mean": 64.0,
+   "work_frac": 0.156,
+   "compress": 38.31,
+   "gap_vs_bp": 0.0604
+  },
+  "512": {
+   "d_hid": 512,
+   "curve": [
+    {
+     "step": 300,
+     "val_ppl": 1.5063
+    },
+    {
+     "step": 600,
+     "val_ppl": 1.3292
+    },
+    {
+     "step": 900,
+     "val_ppl": 1.2826
+    },
+    {
+     "step": 1200,
+     "val_ppl": 1.4263
+    }
+   ],
+   "wall_s": 760.7,
+   "val_ppl_full": 1.4276,
+   "T_mean": 64.0,
+   "work_frac": 0.445,
+   "compress": 40.26,
+   "gap_vs_bp": 0.2482
+  },
+  "slope": 0.1878,
+  "verdict": "✗ наклон остался → M2.1 блокер M4"
+ },
+ "v3c_T32_b003": {
+  "d_hid": 512,
+  "curve": [
+   {
+    "step": 300,
+    "val_ppl": 1.5579
+   },
+   {
+    "step": 600,
+    "val_ppl": 1.437
+   },
+   {
+    "step": 900,
+    "val_ppl": 1.3109
+   },
+   {
+    "step": 1200,
+    "val_ppl": 1.3008
+   }
+  ],
+  "wall_s": 360.7,
+  "val_ppl_full": 1.3069,
+  "T_mean": 32.0,
+  "work_frac": 0.426,
+  "compress": 22.24,
+  "gap_vs_bp": 0.1427
+ },
+ "v3d_T32to64_b01": {
+  "d_hid": 512,
+  "curve": [
+   {
+    "step": 300,
+    "val_ppl": 1.5543
+   },
+   {
+    "step": 600,
+    "val_ppl": 1.3749
+   },
+   {
+    "step": 900,
+    "val_ppl": 1.3031
+   },
+   {
+    "step": 1200,
+    "val_ppl": 1.2701
+   }
+  ],
+  "wall_s": 453.6,
+  "val_ppl_full": 1.2729,
+  "T_mean": 48.0,
+  "work_frac": 0.415,
+  "compress": 32.71,
+  "gap_vs_bp": 0.113
+ },
+ "anchorK20_512": {
+  "d_hid": 512,
+  "curve": [
+   {
+    "step": 300,
+    "val_ppl": 1.912
+   },
+   {
+    "step": 600,
+    "val_ppl": 1.6799
+   },
+   {
+    "step": 900,
+    "val_ppl": 1.76
+   },
+   {
+    "step": 1200,
+    "val_ppl": 1.8404
+   }
+  ],
+  "wall_s": 322.1,
+  "val_ppl_full": 1.8922,
+  "T_mean": 32.0,
+  "work_frac": 0.488,
+  "compress": 19.37,
+  "gap_vs_bp": 0.6545
+ },
+ "anchorK20_96": {
+  "d_hid": 96,
+  "curve": [
+   {
+    "step": 300,
+    "val_ppl": 1.6868
+   },
+   {
+    "step": 600,
+    "val_ppl": 1.522
+   },
+   {
+    "step": 900,
+    "val_ppl": 1.5595
+   },
+   {
+    "step": 1200,
+    "val_ppl": 1.5528
+   }
+  ],
+  "wall_s": 60.2,
+  "val_ppl_full": 1.538,
+  "T_mean": 32.0,
+  "work_frac": 0.213,
+  "compress": 19.76,
+  "gap_vs_bp": 0.3774
+ },
+ "anchorRMS_K20_512": {
+  "d_hid": 512,
+  "curve": [
+   {
+    "step": 300,
+    "val_ppl": 1.5294
+   },
+   {
+    "step": 600,
+    "val_ppl": 1.3736
+   },
+   {
+    "step": 900,
+    "val_ppl": 1.3092
+   },
+   {
+    "step": 1200,
+    "val_ppl": 1.3173
+   }
+  ],
+  "wall_s": 307.5,
+  "val_ppl_full": 1.3069,
+  "T_mean": 32.0,
+  "work_frac": 0.442,
+  "compress": 22.47,
+  "gap_vs_bp": 0.1427
+ },
+ "anchorRMS_K20_96": {
+  "d_hid": 96,
+  "curve": [
+   {
+    "step": 300,
+    "val_ppl": 1.3556
+   },
+   {
+    "step": 600,
+    "val_ppl": 1.1845
+   },
+   {
+    "step": 900,
+    "val_ppl": 1.1741
+   },
+   {
+    "step": 1200,
+    "val_ppl": 1.1871
+   }
+  ],
+  "wall_s": 66.3,
+  "val_ppl_full": 1.1836,
+  "T_mean": 32.0,
+  "work_frac": 0.177,
+  "compress": 23.25,
+  "gap_vs_bp": 0.06
+ }
+}

@@ -157,7 +157,7 @@ class CharMLP:
 
     def pc_relax(self, idx: np.ndarray, y: np.ndarray, beta: float = 0.1,
                  T: int = 32, alpha: float = 0.3, method: str = "euler",
-                 eps: float = 0.0, freeze: float = 0.0,
+                 eps: float = 0.0, freeze: float = 0.0, freeze_q: float = 0.0,
                  bus12: BusSigmaDelta | None = None,
                  bus21: BusSigmaDelta | None = None) -> dict:
         """Релаксация (s1,s2) к min E по состояниям; веса заморожены.
@@ -168,6 +168,11 @@ class CharMLP:
         плотно (честный симулятор), экономия считается как доля координато-шагов,
         которые пропустил бы событийный рантайм. Шина при freeze получает события
         бесплатно: неподвижная координата события не порождает.
+
+        freeze_q>0 (приоритетнее freeze) — КВАНТИЛЬНЫЙ сон: порог берётся как
+        квантиль распределения |pg| текущей итерации (EXP-10: абсолютный порог
+        не переносится по размерам зоны; квантиль нормирован по построению),
+        freeze_q=0.7 ⇔ спят 70% координат данного слоя.
         """
         B = len(idx)
         y_oh = np.zeros((B, self.vocab), np.float32)
@@ -237,10 +242,15 @@ class CharMLP:
             else:
                 s1[act1] -= alpha * g1[act1]
                 s2[act2] -= alpha * g2[act2]
-            if freeze:
+            if freeze or freeze_q:
                 ref1, ref2 = (g1 / d1, g2 / d2) if method in ("bb", "jacobi") else (g1, g2)
-                act1 = np.abs(ref1) >= freeze                # заснуть/проснуться свежим градиентом
-                act2 = np.abs(ref2) >= freeze
+                if freeze_q:
+                    th1 = float(np.quantile(np.abs(ref1), freeze_q))
+                    th2 = float(np.quantile(np.abs(ref2), freeze_q))
+                else:
+                    th1 = th2 = freeze
+                act1 = np.abs(ref1) >= th1                   # заснуть/проснуться свежим градиентом
+                act2 = np.abs(ref2) >= th2
                 work += int(act1.sum() + act2.sum())
                 work_full += 2 * s1.size
             t_used = t + 1
