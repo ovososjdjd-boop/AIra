@@ -37,9 +37,21 @@ from exp12_precond_aa import LR_MAP, batch, load_ids, val_ppl  # noqa: E402
 
 RESULTS = ROOT / "experiments" / "results"
 CTX, D_EMB, B, VOCAB = 32, 32, 128, 64
-BP_REF_2400 = 1.1227  # EXP-12 bprep_512_2400
+BP_REF_2400 = {96: 1.1071, 512: 1.1227}  # EXP-12/13 bprep_*_2400
 STEPS = 2400
 RAMP_AT = 1600  # начало последней трети; минимум истории @1800 — покрыто с запасом
+
+
+def bp_ref(d_hid: int, steps: int = STEPS) -> float:
+    """Знаменатель BP: известные константы или bprep_… из results_exp12.json."""
+    if steps == STEPS and d_hid in BP_REF_2400:
+        return BP_REF_2400[d_hid]
+    fp = RESULTS / "results_exp12.json"
+    if fp.exists():
+        rec = json.loads(fp.read_text(encoding="utf-8")).get(f"bprep_{d_hid}_{steps}")
+        if rec:
+            return float(rec["val_ppl_full"])
+    raise KeyError(f"нет BP-знаменателя для {d_hid}@{steps} — запустите bprep")
 
 
 def lr_factor(sched: str, step: int, steps: int = STEPS, at: int = RAMP_AT) -> float:
@@ -87,7 +99,8 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
     cmin = min(c["val_ppl"] for c in log["curve"])
     log["curve_min"] = cmin
     log["tail_drift"] = round(log["curve"][-1]["val_ppl"] / cmin - 1, 4)
-    log["gap_vs_bp2400"] = round(log["val_ppl_full"] / BP_REF_2400 - 1, 4)
+    log["bp_ref"] = bp_ref(d_hid, steps)
+    log["gap_vs_bp"] = round(log["val_ppl_full"] / log["bp_ref"] - 1, 4)
     return log
 
 
@@ -105,7 +118,7 @@ def main() -> None:
     for sched in scheds:
         r = run(args.size, sched, train_ids, valid_ids, args.steps)
         print(f"   [{args.size}-{sched}] ppl {r['val_ppl_full']:.4f} "
-              f"зазор {r['gap_vs_bp2400']:+.2%} мин {r['curve_min']:.4f} "
+              f"зазор {r['gap_vs_bp']:+.2%} (bp {r['bp_ref']}) мин {r['curve_min']:.4f} "
               f"дрейф {r['tail_drift']:+.2%} работа {r['work_frac']} "
               f"({r['wall_s']} с)", flush=True)
         out[f"lr_{args.size}_{sched}"] = r

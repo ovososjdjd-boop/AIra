@@ -177,8 +177,9 @@ def s2_ladder(train_ids: np.ndarray, valid_ids: np.ndarray, aa: int) -> dict:
     return out
 
 
-BP_REF = {"96": 1.1166, "512": 1.1437}
-LR_MAP = {96: 3e-3, 512: 1.3e-3}
+BP_REF = {"96": 1.1166, "256": 1.1314, "512": 1.1437}
+# честный закон lr ∝ 1/√d_hid (EXP-10): 96→3.0e-3, 256→2.1e-3, 512→1.3e-3
+LR_MAP = {96: 3e-3, 256: 2.1e-3, 512: 1.3e-3}
 
 
 def main() -> None:

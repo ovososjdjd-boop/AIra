@@ -139,5 +139,53 @@
   "curve_min": 1.113,
   "tail_drift": 0.0,
   "gap_vs_bp2400": 0.0025
+ },
+ "lr_256_step03": {
+  "d_hid": 256,
+  "sched": "step03",
+  "curve": [
+   {
+    "step": 300,
+    "val_ppl": 1.3499
+   },
+   {
+    "step": 600,
+    "val_ppl": 1.2076
+   },
+   {
+    "step": 900,
+    "val_ppl": 1.2015
+   },
+   {
+    "step": 1200,
+    "val_ppl": 1.1808
+   },
+   {
+    "step": 1500,
+    "val_ppl": 1.197
+   },
+   {
+    "step": 1800,
+    "val_ppl": 1.1444
+   },
+   {
+    "step": 2100,
+    "val_ppl": 1.1449
+   },
+   {
+    "step": 2400,
+    "val_ppl": 1.1556
+   }
+  ],
+  "lr0": 0.0021,
+  "wall_s": 482.1,
+  "val_ppl_full": 1.1734,
+  "T_mean": 48.0,
+  "work_frac": 0.258,
+  "compress": 38.0,
+  "curve_min": 1.1444,
+  "tail_drift": 0.0098,
+  "bp_ref": 1.1132,
+  "gap_vs_bp": 0.0541
  }
 }
