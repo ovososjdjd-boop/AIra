@@ -66,13 +66,14 @@ def lr_factor(sched: str, step: int, steps: int = STEPS, at: int = RAMP_AT) -> f
 
 
 def run(d_hid: int, sched: str, train_ids: np.ndarray,
-        valid_ids: np.ndarray, steps: int = STEPS) -> dict:
+        valid_ids: np.ndarray, steps: int = STEPS, lr0: float = 0.0) -> dict:
+    lr0 = lr0 or LR_MAP[d_hid]
     model = CharMLP(vocab=VOCAB, ctx=CTX, d_emb=D_EMB, d_hid=d_hid, seed=42)
-    opt = AdamW(model.arrays(), lr=LR_MAP[d_hid])
+    opt = AdamW(model.arrays(), lr=lr0)
     rng = np.random.default_rng(123)
     bus12 = BusSigmaDelta((B, d_hid), 0.05)
     bus21 = BusSigmaDelta((B, d_hid), 0.05)
-    log = {"d_hid": d_hid, "sched": sched, "curve": [], "lr0": LR_MAP[d_hid]}
+    log = {"d_hid": d_hid, "sched": sched, "curve": [], "lr0": lr0}
     T_acc = W_acc = 0.0
     t0 = time.perf_counter()
     for step in range(1, steps + 1):
@@ -82,7 +83,7 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
         g, st = model.pc_grads(x, y, beta=beta, method="bb", alpha=1.0, T=T_eff,
                                freeze=3e-3, eps=1e-2, bus12=bus12, bus21=bus21)
         T_acc += st["T_used"]; W_acc += st["work_frac"]
-        opt.lr = LR_MAP[d_hid] * lr_factor(sched, step, steps)
+        opt.lr = lr0 * lr_factor(sched, step, steps)
         opt.step(g)
         if step % 300 == 0 or step == steps:
             log["curve"].append({"step": step,
@@ -109,6 +110,8 @@ def main() -> None:
     ap.add_argument("--sched", default="all", choices=["step03", "cos03", "const", "all"])
     ap.add_argument("--size", type=int, default=512)
     ap.add_argument("--steps", type=int, default=STEPS)
+    ap.add_argument("--lr", type=float, default=0.0)
+    ap.add_argument("--tag", default="")
     args = ap.parse_args()
     tok = CharTokenizer.load(ROOT / "data" / "tokenizer_char.json")
     train_ids = load_ids(ROOT / "data" / "corpus_train.txt", tok)
@@ -116,12 +119,15 @@ def main() -> None:
     out: dict = {}
     scheds = ("step03", "cos03") if args.sched == "all" else (args.sched,)
     for sched in scheds:
-        r = run(args.size, sched, train_ids, valid_ids, args.steps)
+        r = run(args.size, sched, train_ids, valid_ids, args.steps, lr0=args.lr)
         print(f"   [{args.size}-{sched}] ppl {r['val_ppl_full']:.4f} "
               f"зазор {r['gap_vs_bp']:+.2%} (bp {r['bp_ref']}) мин {r['curve_min']:.4f} "
               f"дрейф {r['tail_drift']:+.2%} работа {r['work_frac']} "
               f"({r['wall_s']} с)", flush=True)
-        out[f"lr_{args.size}_{sched}"] = r
+        tag = args.tag or f"lr_{args.size}_{sched}"
+        if args.lr:
+            tag += f"_lr{args.lr:g}"
+        out[tag] = r
     fp = RESULTS / "results_exp13.json"
     if fp.exists():
         prev = json.loads(fp.read_text(encoding="utf-8"))
