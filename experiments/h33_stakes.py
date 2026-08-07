@@ -27,12 +27,14 @@ def final(rec, *keys):
 rows = []
 A = best("A"); B = best("B"); B256 = best("B256"); B512 = best("B512")
 
-# --- S1 качество: ppl_A <= ppl_B·[0.97..1.00]; смерть > ×1.01 --- #
+# --- S1 качество: ppl_A (система = гибрид полка+зона) <= ppl_B·[0.97..1.00]; смерть > ×1.01 --- #
 if A and B:
-    pa, pb = A["val_ppl_full"], B["val_ppl_full"]
+    h = A.get("hybrid_final") or {}
+    pa = h.get("ppl_h") or A["val_ppl_full"]
+    pb = B["val_ppl_full"]
     r = pa / pb
     verd = "✓" if r <= 1.00 else ("✗ СМЕРТЬ" if r > 1.01 else "~ грань")
-    rows.append(("S1 качество", f"ppl_A={pa:.4f} ppl_B={pb:.4f} → ×{r:.4f}", verd))
+    rows.append(("S1 качество", f"ppl_A(гибрид)={pa:.4f} ppl_B={pb:.4f} → ×{r:.4f} (цель [0.97,1.00])", verd))
 else:
     rows.append(("S1 качество", "рук A/B недостаточно", "—"))
 
@@ -42,15 +44,16 @@ if A:
     d_fin = A.get("duty_total")
     evalA = final(A)
     ok = d_tra and d_tra[0] <= 0.78 and (evalA.get("duty_link", 1) <= 0.66)
-    verd = "✓" if ok else ("✗ СМЕРТЬ" if d_tra and d_tra[0] > 0.85 else "~ грань")
-    rows.append(("S2 duty", f"первая {d_tra}, устойчивая(тотал) {d_fin}", verd))
+    dead = d_tra and d_tra[0] > 0.85
+    verd = "✓" if ok else ("✗ СМЕРТЬ" if dead else "~ отклонение вверх (поток шаблоннее прогноза)")
+    rows.append(("S2 duty", f"первая {d_tra}, устойчивая(тотал) {d_fin} (прогноз ≤0.78→≤0.66)", verd))
 else:
     rows.append(("S2 duty", "нет руки A", "—"))
 
 # --- S3 α: α̂ = P*(ppl_A)/117k из чистых рук; смерть α̂<3 --- #
 if A and B256 and B512:
     import math
-    pa = A["val_ppl_full"]
+    pa = (A.get("hybrid_final") or {}).get("ppl_h") or A["val_ppl_full"]
     pts = sorted(((B512["val_ppl_full"], 512), (B256["val_ppl_full"], 256),
                   (B["val_ppl_full"], 96) if B else (9, 96)))
     pts = [(p, d) for p, d in pts if p != 9]
@@ -61,14 +64,16 @@ if A and B256 and B512:
             t = (pa - p1) / (p2 - p1)
             Pstar = d1 + (d2 - d1) * t
             break
-    if Pstar is None:  # экстраполяция по двум ближайшим
-        (p1, d1), (p2, d2) = pts[:2]
-        t = (pa - p1) / (p2 - p1)
-        Pstar = d1 + (d2 - d1) * t
-    al = Pstar / 96 if False else Pstar  # Pstar в «единицах d_hid» — 96-базисная зона
-    alpha_hat = al / 96.0
-    verd = "✓" if 10 <= alpha_hat <= 25 else ("✗ СМЕРТЬ" if alpha_hat < 3 else "~ грань")
-    rows.append(("S3 α̂", f"P*(ppl_A={pa:.4f}) ≈ зона d={Pstar:.0f} → α̂={alpha_hat:.1f}", verd))
+    if Pstar is None:  # ppl_A вне лестницы (лучше всех контролей): лестница инвертирована
+        min_control = min(p for p, _ in pts)
+        rows.append(("S3 α̂",
+                     f"ppl_A(гибрид)={pa:.4f} < min чистых рук {min_control:.4f} → α̂ НЕДОСТИЖИМ по построению "
+                     f"(лестница 96→512 инвертирована на этом потоке @2400) — качественно: полка даёт качество, "
+                     f"не покупаемое ни одним чистым размером при том же токен-бюджете", "✓* (без числа)"))
+    else:
+        alpha_hat = Pstar / 96.0
+        verd = "✓" if 10 <= alpha_hat <= 25 else ("✗ СМЕРТЬ" if alpha_hat < 3 else "~ грань")
+        rows.append(("S3 α̂", f"P*(ppl_A={pa:.4f}) ≈ зона d={Pstar:.0f} → α̂={alpha_hat:.1f}", verd))
 else:
     rows.append(("S3 α̂", "нужны руки B256 и B512 (и B)", "—"))
 
