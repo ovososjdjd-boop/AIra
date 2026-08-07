@@ -227,6 +227,10 @@ def run(arm: str, steps: int, max_min: float, resume: bool, tag: str,
                      **{f"m_{k}": v for k, v in opt.m.items()},
                      **{f"v_{k}": v for k, v in opt.v.items()})
             save_json(tag, log)
+            # зеркало чекпоинта в git-папку для разборов (переживает снапшоты среды)
+            import shutil
+            (ROOT / "research/ckpts_h33").mkdir(exist_ok=True)
+            shutil.copy(ckpt, ROOT / "research/ckpts_h33" / (ckpt.name + ".tmp").replace(".tmp", ""))
         if max_min and (time.perf_counter() - t0) / 60 >= max_min:
             print(f"   [{tag}] стоп звена --max-minutes {max_min} @step {step}; чекпоинт сохранён", flush=True)
             partial = True
