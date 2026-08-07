@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -135,6 +136,10 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
                      **{f"p_{k}": v for k, v in model.arrays().items()},
                      **{f"m_{k}": v for k, v in opt.m.items()},
                      **{f"v_{k}": v for k, v in opt.v.items()})
+            # страховка от пересозданий среды: рабочая копия ВНЕ маски .gitignore
+            # (ckpt_*.npz в снапшоты не входят → resume после ребилда среды невозможен;
+            # state_<tag>.bin попадает в снапшоты; восстановление: cp обратно в ckpt_<tag>.npz)
+            shutil.copyfile(ckpt, RESULTS / f"state_{tag}.bin")
             save_json(f"partial_{tag}", log)  # частичный след в json
         if stop_at and step >= stop_at:  # досрочный выход (diag): чекпоинт выше уже сохранён
             print(f"   [stop-at {tag}: досрочно на шаге {step} из {steps}]", flush=True)
