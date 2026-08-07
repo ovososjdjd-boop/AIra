@@ -74,7 +74,8 @@ def save_json(key: str, rec: dict) -> None:
 
 def run(d_hid: int, sched: str, train_ids: np.ndarray,
         valid_ids: np.ndarray, steps: int = STEPS, lr0: float = 0.0,
-        at: int = 0, resume: bool = False, tag: str = "", beta0: float = 1.0) -> dict:
+        at: int = 0, resume: bool = False, tag: str = "", beta0: float = 1.0,
+        trise: float = 0.0, beta_tau: int = 0, stop_at: int = 0) -> dict:
     lr0 = lr0 or LR_MAP[d_hid]
     at = at or int(steps * 2 / 3)
     tag = tag or f"{d_hid}_{sched}_{steps}"
@@ -99,19 +100,31 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
         log = dict(json.loads(str(z["log_json"])))
         print(f"   [resume {tag} @step {start}]", flush=True)
     t0 = time.perf_counter()
+    last = start
     for step in range(start + 1, steps + 1):
+        last = step
         x, y = batch(train_ids, rng)
-        beta = max(0.1, beta0 + (0.1 - beta0) * (step / steps))
+        beta_tau = beta_tau or steps
+        # K6 (вторая декада): β-спад АБСОЛЮТНЫЙ, не относительный — удары ∝ времени
+        # накопления в сильной фазе (все взрывы @2400 при растянутой β; здоровый
+        # @1200-прогон прошёл β→0.1 за те же абсолютные 1200 шагов).
+        beta = max(0.1, beta0 + (0.1 - beta0) * min(1.0, step / beta_tau))
         # K1-связка T(β) нормируется от ТЕКУЩЕГО стартового β0 (EXP-14: вторая декада
         # вскрыла рассогласование — нормировка от 1.0 при β0<1 стартует сразу глубоко
         # при сильном β → разнос 300→600). Глубоко только при СЛАБОМ β.
-        T_eff = int(round(32 + (64 - 32) * (beta0 - beta) / max(beta0 - 0.1, 1e-9)))
+        # K5 (вторая декада): глубокую фазу вообще открывать только при β ≤ trise
+        # (удары 2048 собраны при β∈[0.3..0.45] × T≥44; мелко при β>trise).
+        if trise > 0:
+            ramp = min(1.0, max(0.0, (trise - beta) / max(trise - 0.1, 1e-9)))
+            T_eff = int(round(32 + (64 - 32) * ramp))
+        else:
+            T_eff = int(round(32 + (64 - 32) * (beta0 - beta) / max(beta0 - 0.1, 1e-9)))
         g, st = model.pc_grads(x, y, beta=beta, method="bb", alpha=1.0, T=T_eff,
                                freeze=3e-3, eps=1e-2, bus12=bus12, bus21=bus21)
         T_acc += st["T_used"]; W_acc += st["work_frac"]
         opt.lr = lr0 * lr_factor(sched, step, steps, at)
         opt.step(g)
-        if step % 300 == 0 or step == steps:
+        if step % 300 == 0 or step == steps or (stop_at and step == stop_at):
             log["curve"].append({"step": step,
                                  "val_ppl": round(val_ppl(model, valid_ids, n=6), 4)})
             print(f"      {tag} step {step}: "
@@ -123,7 +136,10 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
                      **{f"m_{k}": v for k, v in opt.m.items()},
                      **{f"v_{k}": v for k, v in opt.v.items()})
             save_json(f"partial_{tag}", log)  # частичный след в json
-    n = steps - start
+        if stop_at and step >= stop_at:  # досрочный выход (diag): чекпоинт выше уже сохранён
+            print(f"   [stop-at {tag}: досрочно на шаге {step} из {steps}]", flush=True)
+            break
+    n = max(last - start, 1)
     log["wall_s"] = round(time.perf_counter() - t0, 1)
     log["val_ppl_full"] = round(val_ppl(model, valid_ids, n=20), 4)
     log["T_mean"] = round(T_acc / max(n, 1), 1)
@@ -135,7 +151,7 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
     log["curve_min"] = cmin
     log["tail_drift"] = round(log["curve"][-1]["val_ppl"] / cmin - 1, 4)
     try:
-        log["bp_ref"] = bp_ref(d_hid, steps)
+        log["bp_ref"] = bp_ref(d_hid, last)  # знаменатель по фактической дистанции (важно при stop-at)
         log["gap_vs_bp"] = round(log["val_ppl_full"] / log["bp_ref"] - 1, 4)
     except KeyError:
         log["bp_ref"] = log["gap_vs_bp"] = None  # знаменатель не посчитан — прогон валиден
@@ -150,8 +166,12 @@ def main() -> None:
     ap.add_argument("--lr", type=float, default=0.0)
     ap.add_argument("--at", type=int, default=0, help="начало рампы (по умолч. 2/3 дистанции, K2)")
     ap.add_argument("--beta0", type=float, default=1.0, help="стартовый β (диагностика β-шока на новых декадах)")
+    ap.add_argument("--trise", type=float, default=0.0, help="K5: триггер глубокой фазы по β (0 = старая связка)")
+    ap.add_argument("--beta-tau", type=int, default=0, help="K6: абсолютный горизонт β-спада в шагах (0 = относительный steps)")
     ap.add_argument("--resume", type=int, default=0, help="продолжить с чекпоинта ckpt_<tag>.npz")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--stop-at", type=int, default=0,
+                    help="досрочный выход после N шагов (diag-режим, partial пишется)")
     args = ap.parse_args()
     tok = CharTokenizer.load(ROOT / "data" / "tokenizer_char.json")
     train_ids = load_ids(ROOT / "data" / "corpus_train.txt", tok)
@@ -162,7 +182,9 @@ def main() -> None:
         if args.lr:
             ctag += f"_lr{args.lr:g}"
         r = run(args.size, sched, train_ids, valid_ids, args.steps, lr0=args.lr,
-                at=args.at, resume=bool(args.resume), tag=ctag, beta0=args.beta0)
+                at=args.at, resume=bool(args.resume), tag=ctag, beta0=args.beta0,
+                trise=args.trise, beta_tau=args.beta_tau or 0, stop_at=args.stop_at)
+
         gap_s = f"{r['gap_vs_bp']:+.2%}" if r["gap_vs_bp"] is not None else "—"
         print(f"   [{ctag}] ppl {r['val_ppl_full']:.4f} "
               f"зазор {gap_s} (bp {r['bp_ref']}) мин {r['curve_min']:.4f} "

@@ -230,5 +230,45 @@
    }
   },
   "ppl_model_pure": 1.1246
+ },
+ "hybrid_wikitext2": {
+  "l1_spec": "зона-96 PC v3.2 step03@2400",
+  "scan_s": 1692.3,
+  "n": 1123920,
+  "grid": {
+   "th0.45": {
+    "cover": 0.9975,
+    "ppl_hybrid": 2.6194,
+    "delta_ppl_vs_pure": 0.4322,
+    "l0_acc": 0.808,
+    "l1_ppl_on_l0_pos": 1.8261,
+    "compute_saved": 0.9975
+   },
+   "th0.6": {
+    "cover": 0.941,
+    "ppl_hybrid": 2.447,
+    "delta_ppl_vs_pure": 0.3379,
+    "l0_acc": 0.8235,
+    "l1_ppl_on_l0_pos": 1.7838,
+    "compute_saved": 0.941
+   },
+   "th0.75": {
+    "cover": 0.6749,
+    "ppl_hybrid": 1.9695,
+    "delta_ppl_vs_pure": 0.0768,
+    "l0_acc": 0.875,
+    "l1_ppl_on_l0_pos": 1.6972,
+    "compute_saved": 0.6749
+   },
+   "th0.9": {
+    "cover": 0.2905,
+    "ppl_hybrid": 1.7522,
+    "delta_ppl_vs_pure": -0.042,
+    "l0_acc": 0.9503,
+    "l1_ppl_on_l0_pos": 1.5024,
+    "compute_saved": 0.2905
+   }
+  },
+  "ppl_model_pure": 1.829
  }
 }
