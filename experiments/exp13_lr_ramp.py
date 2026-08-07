@@ -78,7 +78,7 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
         valid_ids: np.ndarray, steps: int = STEPS, lr0: float = 0.0,
         at: int = 0, resume: bool = False, tag: str = "", beta0: float = 1.0,
         trise: float = 0.0, beta_tau: int = 0, stop_at: int = 0,
-        late: float = 0.3) -> dict:
+        late: float = 0.3, sat: float = 0.0, sat_c: float = 2.0) -> dict:
     lr0 = lr0 or LR_MAP[d_hid]
     at = at or int(steps * 2 / 3)
     tag = tag or f"{d_hid}_{sched}_{steps}"
@@ -88,7 +88,7 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
     bus12 = BusSigmaDelta((B, d_hid), 0.05)
     bus21 = BusSigmaDelta((B, d_hid), 0.05)
     log = {"d_hid": d_hid, "sched": sched, "curve": [], "lr0": lr0, "at": at,
-           "beta0": beta0, "late": late}
+           "beta0": beta0, "late": late, "sat": sat, "sat_c": sat_c}
     start, T_acc, W_acc = 0, 0.0, 0.0
     ckpt = RESULTS / f"ckpt_{tag}.npz"
     if resume and ckpt.exists():  # возобновление после стирания среды
@@ -123,7 +123,8 @@ def run(d_hid: int, sched: str, train_ids: np.ndarray,
         else:
             T_eff = int(round(32 + (64 - 32) * (beta0 - beta) / max(beta0 - 0.1, 1e-9)))
         g, st = model.pc_grads(x, y, beta=beta, method="bb", alpha=1.0, T=T_eff,
-                               freeze=3e-3, eps=1e-2, bus12=bus12, bus21=bus21)
+                               freeze=3e-3, eps=1e-2, bus12=bus12, bus21=bus21,
+                               sat=sat, sat_c=sat_c)
         T_acc += st["T_used"]; W_acc += st["work_frac"]
         opt.lr = lr0 * lr_factor(sched, step, steps, at, late)
         opt.step(g)
@@ -177,6 +178,9 @@ def main() -> None:
     ap.add_argument("--beta-tau", type=int, default=0, help="K6: абсолютный горизонт β-спада в шагах (0 = относительный steps)")
     ap.add_argument("--resume", type=int, default=0, help="продолжить с чекпоинта ckpt_<tag>.npz")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--sat", type=float, default=0.0,
+                    help="K9: клапан чувствительности γ (0 = выкл.; корень ударов = лавина tanh-плато)")
+    ap.add_argument("--sat-c", type=float, default=2.0, help="порог |pre2| клапана")
     ap.add_argument("--late-lr", type=float, default=0.3,
                     help="K8a: множитель lr на полке после рампы (K2=0.3; боевой №7=0.1)")
     ap.add_argument("--stop-at", type=int, default=0,
@@ -192,10 +196,12 @@ def main() -> None:
             ctag += f"_lr{args.lr:g}"
         if args.late_lr != 0.3:
             ctag += f"_ll{args.late_lr:g}"
+        if args.sat:
+            ctag += f"_sat{args.sat:g}"
         r = run(args.size, sched, train_ids, valid_ids, args.steps, lr0=args.lr,
                 at=args.at, resume=bool(args.resume), tag=ctag, beta0=args.beta0,
                 trise=args.trise, beta_tau=args.beta_tau or 0, stop_at=args.stop_at,
-                late=args.late_lr)
+                late=args.late_lr, sat=args.sat, sat_c=args.sat_c)
 
         gap_s = f"{r['gap_vs_bp']:+.2%}" if r["gap_vs_bp"] is not None else "—"
         print(f"   [{ctag}] ppl {r['val_ppl_full']:.4f} "

@@ -145,20 +145,26 @@ class CharMLP:
         return g, float(loss)
 
     # --- PC-релаксация состояний (зонная механика M2) ---
-    def _state_energy(self, x, s1, s1_bus, s2, y_oh, beta):
+    def _state_energy(self, x, s1, s1_bus, s2, y_oh, beta,
+                      sat: float = 0.0, sat_c: float = 2.0):
         f1 = np.tanh(x @ self.W1.T + self.b1)
         e1 = s1 - f1
-        f2 = np.tanh(s1_bus @ self.W2.T + self.b2)
+        pre2 = s1_bus @ self.W2.T + self.b2
+        f2 = np.tanh(pre2)
         e2 = s2 - f2
         logits = s2 @ self.W3.T + self.b3
         p = softmax(logits)
         ce = -np.log(np.clip(p[y_oh == 1], 1e-12, 1)).mean()
-        return 0.5 * float((e1**2).mean()) + 0.5 * float((e2**2).mean()) + beta * float(ce)
+        e = 0.5 * float((e1**2).mean()) + 0.5 * float((e2**2).mean()) + beta * float(ce)
+        if sat:  # клапан чувствительности (EXP-14: корень ударов = лавина tanh-плато)
+            m = np.clip(np.abs(pre2) - sat_c, 0.0, None)
+            e += 0.5 * sat * float((m**2).mean())
+        return e
 
     def pc_relax(self, idx: np.ndarray, y: np.ndarray, beta: float = 0.1,
                  T: int = 32, alpha: float = 0.3, method: str = "euler",
                  eps: float = 0.0, freeze: float = 0.0, freeze_q: float = 0.0,
-                 aa: int = 0,
+                 aa: int = 0, sat: float = 0.0, sat_c: float = 2.0,
                  bus12: BusSigmaDelta | None = None,
                  bus21: BusSigmaDelta | None = None) -> dict:
         """Релаксация (s1,s2) к min E по состояниям; веса заморожены.
@@ -216,6 +222,10 @@ class CharMLP:
             dce = softmax(logits) - y_oh
             g1 = (s1 - f1) - m2
             g2 = e2 + beta * (dce @ self.W3)
+            if sat:  # клапан чувствительности: градиент γ·relu(|pre2|−c)·sign по s1
+                pre2_sat = s1_sent @ self.W2.T + self.b2
+                msat = np.clip(np.abs(pre2_sat) - sat_c, 0.0, None) * np.sign(pre2_sat)
+                g1 = g1 + sat * (msat @ self.W2)
             resid = float(max(np.abs(g1).max(), np.abs(g2).max()))
             d1 = 1.0 + f1p**2 * rW2
             d2 = np.broadcast_to(1.0 + beta * rW3, g2.shape)
@@ -223,7 +233,7 @@ class CharMLP:
                 pg1, pg2 = g1 / d1, g2 / d2
                 if s1p is None:                              # первый шаг — jacobi
                     g1p, g2p = pg1, pg2
-                    E_prev = self._state_energy(x, s1, s1_sent, s2, y_oh, beta)
+                    E_prev = self._state_energy(x, s1, s1_sent, s2, y_oh, beta, sat, sat_c)
                     s1p, s2p = s1.copy(), s2.copy()
                     s1[act1] -= alpha * pg1[act1]
                     s2[act2] -= alpha * pg2[act2]
@@ -233,7 +243,7 @@ class CharMLP:
                         num = abs(float((ds * dg).sum()))
                         den = float((dg * dg).sum()) + 1e-30
                         bb.append(float(np.clip(num / den, 0.05, 2.0)) if num > 0 else 1.0)
-                    E_here = self._state_energy(x, s1, s1_sent, s2, y_oh, beta)
+                    E_here = self._state_energy(x, s1, s1_sent, s2, y_oh, beta, sat, sat_c)
                     if E_here > E_prev * (1 + 1e-4):         # сторож: рост E
                         damp *= 0.5                          # — откат и затухание
                         s1, s2 = s1p, s2p
@@ -278,7 +288,8 @@ class CharMLP:
                                     t1 = s1.copy(); t1[act1] = c1[act1]
                                     t2 = s2.copy(); t2[act2] = c2[act2]
                                     E_c = self._state_energy(x, t1, s1_sent,
-                                                             t2, y_oh, beta)
+                                                             t2, y_oh, beta,
+                                                             sat, sat_c)
                                     if E_c <= E_prev * (1 + 1e-4):
                                         s1[...] = t1; s2[...] = t2
                                         E_prev = E_c
@@ -321,7 +332,8 @@ class CharMLP:
 
     # --- локальные градиенты весов при заданных состояниях ---
     def local_grads(self, st: dict, idx: np.ndarray, beta: float,
-                    s1_for_w2: np.ndarray | None = None) -> dict[str, np.ndarray]:
+                    s1_for_w2: np.ndarray | None = None,
+                    sat: float = 0.0, sat_c: float = 2.0) -> dict[str, np.ndarray]:
         """Однофазный оценщик: ∂E/∂W в равновесии (локальные произведения)."""
         B = len(idx)
         x, s1, s2, y_oh = st["x"], st["s1"], st["s2"], st["y_oh"]
@@ -337,6 +349,11 @@ class CharMLP:
         g = {"W1": -(t1.T @ x) / B, "b1": -t1.mean(0),
              "W2": -(t2.T @ s1_w2) / B, "b2": -t2.mean(0),
              "W3": beta * (dce.T @ s2) / B, "b3": beta * dce.mean(0)}
+        if sat:  # клапан чувствительности: ∂/∂W2 (γ/2)·relu(|pre2|−c)²
+            pre2g = s1_w2 @ self.W2.T + self.b2
+            msat = np.clip(np.abs(pre2g) - sat_c, 0.0, None) * np.sign(pre2g)
+            g["W2"] = g["W2"] + sat * (msat.T @ s1_w2) / B
+            g["b2"] = g["b2"] + sat * msat.mean(0)
         dx = (t1 @ self.W1).reshape(B, self.ctx, self.d_emb)
         g_emb = np.zeros_like(self.emb)
         np.add.at(g_emb, idx.reshape(-1), dx.reshape(-1, self.d_emb))
@@ -350,7 +367,9 @@ class CharMLP:
             st = self.pc_relax(idx, y, beta=beta, **relax_kw)
             bus12 = relax_kw.get("bus12")
             g = self.local_grads(st, idx, beta,
-                                 s1_for_w2=None if bus12 is None else bus12.level)
+                                 s1_for_w2=None if bus12 is None else bus12.level,
+                                 sat=relax_kw.get("sat", 0.0),
+                                 sat_c=relax_kw.get("sat_c", 2.0))
             st.pop("y_oh"), st.pop("x")
             return g, st
         st0 = self.pc_relax(idx, y, beta=0.0, **relax_kw)
