@@ -1,0 +1,30 @@
+{
+ "results": {
+  "c8N1": {
+   "add_pp": 0.1101,
+   "add_acc": 0.5262,
+   "union_duty": 0.5342,
+   "union_acc": 0.8689
+  },
+  "c6N2": {
+   "add_pp": 0.1674,
+   "add_acc": 0.4469,
+   "union_duty": 0.5914,
+   "union_acc": 0.8133
+  },
+  "c8N2": {
+   "add_pp": 0.0857,
+   "add_acc": 0.482,
+   "union_duty": 0.5097,
+   "union_acc": 0.8779
+  },
+  "c6N4": {
+   "add_pp": 0.1406,
+   "add_acc": 0.4255,
+   "union_duty": 0.5646,
+   "union_acc": 0.8253
+  }
+ },
+ "verdict": "✗ СМЕРТЬ СЕМЕЙСТВА «КЭШ»",
+ "elapsed_s": 105.62560057640076
+}
