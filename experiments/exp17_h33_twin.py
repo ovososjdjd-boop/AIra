@@ -14,6 +14,17 @@
 генератор, накопители duty и ПОЛКУ.
 
 Запуск: .venv/bin/python experiments/exp17_h33_twin.py --arm A [--max-minutes 12]
+
+ЖИВОЙ НАРЯД (смонтирован 08.08, виза ждёт «пускай»):
+  --src live   поток wikitext2 (corpus_external/wikitext2/{train,valid}.txt)
+               через токенизатор wiki64 (data/tokenizer_wiki64.json, OOV ~1%);
+               химия v3.2 и код полки c8 неизменны (VOCAB=64).
+  --sufler X   npz-чекпоинт суфлёра (рука B) → в ОЦЕНКЕ руки A включается
+               маршрутизатор v3 (канон V1): covered_v3 = {N≥2, f≥0.90}
+               ∪ {N≥2, f∈[0.70,0.90), top1_суфлёр == кандидат}.
+               Обучение остаётся v2-фильтром (θ=0.90) — дизайн заморожен;
+               v3 — режим применения/оценки. Метрики: duty_v3, acc_v3u,
+               ppl_h_v3, S6' (s6p_*: суфлёр-кандидат на полосе [0.7,0.9)).
 """
 from __future__ import annotations
 
@@ -93,26 +104,45 @@ def val_ppl(model, data, n=20, seed=7):
     return float(np.exp(sum(ls) / len(ls)))
 
 
-def hybrid_eval(model, shelf: Shelf, data, n=6, seed=7):
+def hybrid_eval(model, shelf: Shelf, data, n=6, seed=7, sufler=None):
     """S1-гибрид + S4: ppl гибрида, покрытие и acc полки, бины для S6.
-    covered → вероятность полки (count/N, пол 1e-3); иначе модель."""
+    covered → вероятность полки (count/N, пол 1e-3); иначе модель.
+    sufler (зона B) включает оценку маршрутизатора v3 (канон V1):
+    covered_v3 = {N≥2, f≥0.90} ∪ {N≥2, f∈[0.70,0.90), top1_суфлёр == кандидат};
+    S6' (s6p_*) — форма живой полосы [0.7,0.9) с согласованием суфлёра."""
     rng = np.random.default_rng(seed)
-    ce = []
+    ce, ce3 = [], []
     cov = hit = tot = 0
+    cov3 = hit3 = 0
     s6_pass = s6_pass_ok = s6_ok = 0  # валидатор: passed, passed&ok, ok всего
+    s6p_pass = s6p_pass_ok = s6p_ok = 0  # S6': полоса [0.7,0.9), pass=суфлёр==кандидат
     for _ in range(n):
         x, y = batch(data, rng)
         logits, _ = model.forward(x)
         p = np.exp(logits - logits.max(1, keepdims=True))
         p /= p.sum(1, keepdims=True)
         codes = code8(x)
+        top1_s = None
+        if sufler is not None:
+            logits_s, _ = sufler.forward(x)
+            top1_s = logits_s.argmax(1)
         for j in range(len(y)):
             N, f, tx = shelf.query(int(codes[j]))
             tot += 1
-            if N >= NMIN and f >= THETA:
+            cnt = shelf.cnt.get(int(codes[j]), {})
+            covered = N >= NMIN and f >= THETA
+            in_band = N >= NMIN and 0.70 <= f < THETA and tx >= 0
+            pass_s = bool(in_band and top1_s is not None and int(top1_s[j]) == tx)
+            if covered:
                 cov += 1
                 hit += (tx == y[j])
-                cnt = shelf.cnt[int(codes[j])]
+            if covered or pass_s:
+                cov3 += 1
+                hit3 += (tx == y[j])
+                ce3.append(-np.log(max(cnt.get(int(y[j]), 0) / N, 1e-3)))
+            else:
+                ce3.append(-np.log(np.clip(p[j, y[j]], 1e-12, 1)))
+            if covered:
                 ce.append(-np.log(max(cnt.get(int(y[j]), 0) / N, 1e-3)))
             else:
                 ce.append(-np.log(np.clip(p[j, y[j]], 1e-12, 1)))
@@ -124,22 +154,57 @@ def hybrid_eval(model, shelf: Shelf, data, n=6, seed=7):
                 if rank <= 2:
                     s6_pass += 1
                     s6_pass_ok += ok
+            # S6' (канон V1): широкая полоса N≥2, f<0.90; pass = суфлёр==кандидат ∧ f≥0.70
+            if N >= NMIN and f < THETA and tx >= 0:
+                ok = (tx == y[j])
+                s6p_ok += ok
+                if f >= 0.70 and pass_s:
+                    s6p_pass += 1
+                    s6p_pass_ok += ok
     ppl = float(np.exp(np.mean(ce))) if ce else float("nan")
-    return dict(ppl_h=round(ppl, 4),
-                shelf_cov=round(cov / max(tot, 1), 4), shelf_acc=round(hit / max(cov, 1), 4),
-                s6_prec=round(s6_pass_ok / max(s6_pass, 1), 4),
-                s6_rec=round(s6_pass_ok / max(s6_ok, 1), 4),
-                s6_n_pass=s6_pass, s6_n_ok=int(s6_ok))
+    out = dict(ppl_h=round(ppl, 4),
+               shelf_cov=round(cov / max(tot, 1), 4), shelf_acc=round(hit / max(cov, 1), 4),
+               s6_prec=round(s6_pass_ok / max(s6_pass, 1), 4),
+               s6_rec=round(s6_pass_ok / max(s6_ok, 1), 4),
+               s6_n_pass=s6_pass, s6_n_ok=int(s6_ok))
+    if sufler is not None:
+        out.update(ppl_h_v3=round(float(np.exp(np.mean(ce3))), 4) if ce3 else float("nan"),
+                   duty_v3=round(cov3 / max(tot, 1), 4),
+                   acc_v3u=round(hit3 / max(cov3, 1), 4),
+                   v3_gain_pp=round(100 * (cov3 - cov) / max(tot, 1), 2),
+                   s6p_prec=round(s6p_pass_ok / max(s6p_pass, 1), 4),
+                   s6p_rec=round(s6p_pass_ok / max(s6p_ok, 1), 4),
+                   s6p_n_pass=s6p_pass, s6p_n_ok=int(s6p_ok))
+    return out
+
+
+def load_sufler(path: Path) -> CharMLP:
+    """суфлёр (веса руки B) из npz-чекпоинта; d_hid выводится из лога чекпоинта."""
+    z = np.load(path, allow_pickle=True)
+    d = 96
+    if "log_json" in z.files:
+        d = int(dict(json.loads(str(z["log_json"]))).get("d_hid", 96))
+    m = CharMLP(vocab=VOCAB, ctx=CTX, d_emb=D_EMB, d_hid=d, seed=42)
+    m.load_arrays({k[2:]: z[k] for k in z.files if k.startswith("p_")})
+    return m
 
 
 def run(arm: str, steps: int, max_min: float, resume: bool, tag: str,
-        stop_at: int, report_every: int) -> dict:
+        stop_at: int, report_every: int, src: str = "m1", sufler: str = "") -> dict:
     d_hid = {"A": 96, "B": 96, "B256": 256, "B512": 512}[arm]
     use_shelf = arm == "A"
     lr0 = LR_MAP[d_hid]
-    tok = CharTokenizer.load(ROOT / "data" / "tokenizer_char.json")
-    train_ids = load_ids(ROOT / "data" / "corpus_valid.txt" if False else ROOT / "data" / "corpus_train.txt", tok)
-    valid_ids = load_ids(ROOT / "data" / "corpus_valid.txt", tok)
+    if src == "live":
+        tok = CharTokenizer.load(ROOT / "data" / "tokenizer_wiki64.json")
+        train_ids = load_ids(ROOT / "corpus_external" / "wikitext2" / "train.txt", tok)
+        valid_ids = load_ids(ROOT / "corpus_external" / "wikitext2" / "valid.txt", tok)
+    else:
+        tok = CharTokenizer.load(ROOT / "data" / "tokenizer_char.json")
+        train_ids = load_ids(ROOT / "data" / "corpus_train.txt", tok)
+        valid_ids = load_ids(ROOT / "data" / "corpus_valid.txt", tok)
+    suf = load_sufler(Path(sufler)) if sufler else None
+    if suf is not None:
+        print(f"   [h33] суфлёр ← {sufler} (маршрутизатор v3 в оценке)", flush=True)
 
     model = CharMLP(vocab=VOCAB, ctx=CTX, d_emb=D_EMB, d_hid=d_hid, seed=42)
     opt = AdamW(model.arrays(), lr=lr0)
@@ -160,10 +225,11 @@ def run(arm: str, steps: int, max_min: float, resume: bool, tag: str,
         rng = np.random.default_rng(); rng.bit_generator.state = z["rng_state"].item()
         log = dict(json.loads(str(z["log_json"])))
         if use_shelf and "shelf_dump" in z:
-            codes, nexts, cnts = z["shelf_dump"]
+            sd = z["shelf_dump"]
             shelf = Shelf()
-            for c, x2, n in zip(codes.tolist(), nexts.tolist(), cnts.tolist()):
-                shelf.cnt[int(c)] = collections.Counter({int(x2): int(n)})
+            for c, x2, n in zip(sd[:, 0].tolist(), sd[:, 1].tolist(), sd[:, 2].tolist()):
+                cc = shelf.cnt.setdefault(int(c), collections.Counter())
+                cc[int(x2)] += int(n)
                 shelf.seen_pairs += int(n)
         print(f"   [h33 resume {tag} @step {start}]", flush=True)
 
@@ -206,7 +272,7 @@ def run(arm: str, steps: int, max_min: float, resume: bool, tag: str,
             rec = {"step": step, "val_ppl": round(val_ppl(model, valid_ids), 4),
                    "duty_link": round(link_cov / max(link_pos, 1), 4), "wall_s": round(wall, 1)}
             if use_shelf:
-                he = hybrid_eval(model, shelf, valid_ids)
+                he = hybrid_eval(model, shelf, valid_ids, sufler=suf)
                 rec.update(he)
             log["curve"].append(rec)
             link_pos = link_cov = 0
@@ -244,10 +310,11 @@ def run(arm: str, steps: int, max_min: float, resume: bool, tag: str,
     log["val_ppl_full"] = round(val_ppl(model, valid_ids, n=20), 4)
     log["duty_total"] = round(log["covered"] / max(log["positions"], 1), 4)
     log["shelf"] = shelf.stats() if use_shelf else None
+    log["src"] = src
     n_tok = max(log["tokens_train"], 1)
     log["ms_per_tok"] = round(1000 * log["wall_s"] / n_tok, 5)
     if use_shelf:
-        log["hybrid_final"] = hybrid_eval(model, shelf, valid_ids, n=20)
+        log["hybrid_final"] = hybrid_eval(model, shelf, valid_ids, n=20, sufler=suf)
     save_json(tag, log)
     return log
 
@@ -268,10 +335,14 @@ def main() -> None:
     ap.add_argument("--tag", default="")
     ap.add_argument("--stop-at", type=int, default=0)
     ap.add_argument("--report-every", type=int, default=300)
+    ap.add_argument("--src", default="m1", choices=["m1", "live"],
+                    help="m1 — стойка M1 (по умолчанию); live — wikitext2 + wiki64")
+    ap.add_argument("--sufler", default="",
+                    help="путь к npz-чекпоинту суфлёра (рука B) → маршрутизатор v3 в оценке A")
     args = ap.parse_args()
     tag = args.tag or f"{args.arm}_{args.steps}"
     r = run(args.arm, args.steps, args.max_minutes, bool(args.resume), tag,
-            args.stop_at, args.report_every)
+            args.stop_at, args.report_every, src=args.src, sufler=args.sufler)
     print(f"   [готово {tag}] ppl {r['val_ppl_full']:.4f}"
           + (f" гибр {r['hybrid_final']['ppl_h']} S6 prec/rec {r['hybrid_final']['s6_prec']}/{r['hybrid_final']['s6_rec']}" if args.arm == "A" else "")
           + f" duty {r['duty_total']:.3f} мс/ток {r['ms_per_tok']} ({r['wall_s']} с, partial={r['partial']})", flush=True)

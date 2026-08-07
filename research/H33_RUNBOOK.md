@@ -52,6 +52,42 @@ K2 lr×0.3 последняя треть, freeze 3e-3, шина θ=0.05, seed 42
   затем --resume 1 (веса и полка в чекпоинте).
 
 ## После прогона (вне этого протокола)
-- Живой текст (wikitext2) — отдельный наряд (гибрид A на live, как EXP-15b).
-- S6-валидатор «пропускает кандидатов полки» — переводится в канон роутера v3
-  только при ✓ по S6 и ✓ по S1 совместно.
+- Живой текст (wikitext2) — отдельный наряд (смонтирован 08.08, см. ниже).
+- S6-валидатор — канонизирован в маршрутизаторе v3 (V1-ремонт, жгут b2b пройден).
+
+---
+
+# ЖИВОЙ НАРЯД (wikitext2) — смонтирован 08.08, пуск ТОЛЬКО по визе «пускай»
+
+Прогнозы заморожены в H33_STAKES.md (акт L1 мостик, акт L2 главный, S1/S2/S3/
+S4/S5/V3/S6' — полосы и смерти). Правила прогона те же (один процесс, звенья
+≤12 мин, отчёт после каждого звена, чекпоинты, ставки не меняются посреди).
+
+Подготовка среды после снапшота (добавлено к стандартной):
+```
+bash scripts/setup_env.sh && .venv/bin/python scripts/build_corpus.py \
+  && .venv/bin/python scripts/build_wiki_tokenizer.py
+```
+(corpus_external/wikitext2 уцелевает; wiki64 воспроизводится детерминированно.)
+
+Жгут кода v3 (ноль обучения, обязателен перед пуском и после любого патча):
+```
+.venv/bin/python experiments/h33_v3_burn.py   # ожидание: ✓ ЖГУТ ПРОЙДЕН
+```
+
+Акт L1 (мостик, ≈26 мин стены обеими руками):
+```
+.venv/bin/python experiments/exp17_h33_twin.py --arm B --src live --steps 2400 --tag liveB_2400 --max-minutes 12
+.venv/bin/python experiments/exp17_h33_twin.py --arm A --src live --steps 2400 --tag liveA_2400 --max-minutes 12 \
+  --sufler research/ckpts_h33/ckpt_h33_liveB_2400.npz
+```
+Акт L2 (главный, 76 000 шагов ≈ 9.73M символов, звеньями ≤12 мин, ≈14–16 звеньев):
+```
+.venv/bin/python experiments/exp17_h33_twin.py --arm B --src live --steps 76000 --tag liveB_76k --max-minutes 12 --resume 1
+.venv/bin/python experiments/exp17_h33_twin.py --arm A --src live --steps 76000 --tag liveA_76k --max-minutes 12 --resume 1 \
+  --sufler research/ckpts_h33/ckpt_h33_liveB_76k.npz
+```
+Суфлёр руки A пересматривается ПО ЗВЕНЬЯМ B (последний чекпоинт B на момент
+звена A); порядок исполнения: B целиком → A целиком (суфлёр тогда финальный
+B — единая эталонная точка, как в V1). Отклонения/стоп — по тем же триггерам,
+плюс смерти живого наряда из H33_STAKES.md.
